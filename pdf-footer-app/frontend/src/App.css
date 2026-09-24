@@ -36,11 +36,68 @@
 .drop-text { font-size: 0.95rem; color: var(--ink); line-height: 1.6; }
 .drop-text strong { font-weight: 500; }
 .drop-limit { font-size: 0.75rem; color: var(--ink-light); letter-spacing: 0.05em; text-transform: uppercase; font-family: 'DM Mono', monospace; }
+.format-chips {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin: 0.2rem 0;
+}
+.format-chip {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  color: var(--ink-light);
+  letter-spacing: 0.02em;
+}
 .file-info { display: flex; align-items: center; gap: 0.75rem; text-align: left; }
 .file-icon { font-size: 1.75rem; flex-shrink: 0; }
 .file-details { flex: 1; min-width: 0; }
+.file-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
 .file-name { display: block; font-weight: 500; font-size: 0.9rem; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.badge-docx { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+.badge-pdf { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+.badge-img { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.badge-txt { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
+.badge-other { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+.file-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.2rem;
+  flex-wrap: wrap;
+}
 .file-size { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--ink-light); }
+.convert-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--amber);
+  background: var(--amber-pale);
+  padding: 0.08rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 118, 10, 0.25);
+  font-family: 'DM Sans', sans-serif;
+}
 .remove-btn {
   background: none; border: 1px solid var(--border); border-radius: 50%;
   width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;

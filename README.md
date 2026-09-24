@@ -1,11 +1,12 @@
-# FOOTERFORGE — PDF Footer Replacer
+# FOOTERFORGE — Universal Document to PDF Footer Replacer
 
-A modern full-stack web application that dynamically covers and replaces the footer on every page of a PDF document with custom student/user details (Name, Enrollment Number, and Semester) with automatic spacing and font scaling.
+A modern full-stack web application that dynamically converts documents in various formats (Microsoft Word `.docx`/`.doc`, plain text `.txt`/`.md`, images `.png`/`.jpg`/`.webp`, or `.pdf`) into PDF, and covers & stamps the footer on every page with custom user details (**Name**, **Enrollment Number**, and **Semester**) with automatic spacing and dynamic font scaling.
 
 ---
 
 ## Features
 
+- **Universal Document Support**: Upload Word (`.docx`, `.doc`), Images (`.png`, `.jpg`, `.jpeg`, `.webp`), Plain Text (`.txt`, `.md`), or native `.pdf`. Non-PDF documents are automatically converted to PDF before stamping.
 - **Automated Footer Replacement**: Overlays a clean white zone and divider line across the bottom of every page to conceal existing footers.
 - **Three-Section Balanced Layout**:
   - **Left**: `Name: <name>`
@@ -13,8 +14,11 @@ A modern full-stack web application that dynamically covers and replaces the foo
   - **Right**: `Semester: <semester>`
 - **Smart Auto-Scaling**: Dynamically computes text width and adjusts font size so text never clips or overlaps, even with long entries.
 - **Live Interactive Preview**: Instant real-time footer preview in the browser before processing.
-- **Direct PDF Processing**: High-performance, memory-efficient PDF manipulation using `pdf-lib` without quality loss.
-- **Privacy-First**: Uploaded files are processed in-memory / temporary storage and immediately cleaned up after processing.
+- **Dual Engine Conversion Pipeline**:
+  - High-fidelity conversion via Mammoth & headless Edge / Chrome / LibreOffice.
+  - Direct image embedding via `pdf-lib` with automatic A4 scaling.
+  - Pure layout fallback ensuring conversion works in any environment.
+- **Privacy-First**: Uploaded files are processed in temporary storage and immediately cleaned up after processing.
 
 ---
 
@@ -24,6 +28,7 @@ A modern full-stack web application that dynamically covers and replaces the foo
 |---|---|
 | **Frontend** | React 19, Vite, Vanilla CSS |
 | **Backend** | Node.js, Express |
+| **Conversion Engine** | Mammoth, Headless Edge / Chrome, LibreOffice |
 | **PDF Engine** | `pdf-lib` |
 | **File Handling** | Multer (multipart/form-data) |
 
@@ -38,6 +43,7 @@ FOOTERFORGE/
 └── pdf-footer-app/
     ├── backend/
     │   ├── server.js          # Express API & PDF stamping engine
+    │   ├── converter.js       # Universal document converter (Word/Image/Text -> PDF)
     │   ├── uploads/           # Temp storage (auto-cleaned)
     │   └── package.json
     └── frontend/
@@ -96,11 +102,11 @@ Open `http://localhost:5000` in your browser.
 ## API Reference
 
 ### `POST /upload`
-Multipart form-data endpoint to stamp footer onto an uploaded PDF.
+Multipart form-data endpoint to convert any document and stamp footer.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `pdf` | File | Yes | PDF file (max 10 MB) |
+| `file` (or `pdf`) | File | Yes | Document file: `.docx`, `.doc`, `.pdf`, `.png`, `.jpg`, `.txt` (max 25 MB) |
 | `name` | String | Yes | Name for left footer section |
 | `enrollmentNumber` | String | Yes | Enrollment number for center section |
 | `semester` | String | Yes | Semester for right footer section |

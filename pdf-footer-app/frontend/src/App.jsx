@@ -5,6 +5,17 @@ const API_BASE_URL = import.meta.env.VITE_API_URL !== undefined
   ? import.meta.env.VITE_API_URL
   : (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '' : 'https://footerforge.onrender.com')
 
+const SUPPORTED_EXTS = ['.pdf', '.docx', '.doc', '.txt', '.md', '.rtf', '.png', '.jpg', '.jpeg', '.webp']
+
+function getFileTypeInfo(filename) {
+  const ext = (filename || '').slice((filename || '').lastIndexOf('.')).toLowerCase()
+  if (ext === '.pdf') return { label: 'PDF', icon: '📕', badgeClass: 'badge-pdf', isPdf: true }
+  if (['.docx', '.doc'].includes(ext)) return { label: 'WORD', icon: '📘', badgeClass: 'badge-docx', isPdf: false }
+  if (['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) return { label: 'IMAGE', icon: '🖼️', badgeClass: 'badge-img', isPdf: false }
+  if (['.txt', '.md', '.rtf'].includes(ext)) return { label: 'TEXT', icon: '📃', badgeClass: 'badge-txt', isPdf: false }
+  return { label: 'DOC', icon: '📄', badgeClass: 'badge-other', isPdf: false }
+}
+
 export default function App() {
   const [file, setFile] = useState(null)
   const [name, setName] = useState('')
@@ -20,16 +31,27 @@ export default function App() {
 
   const handleFile = useCallback((f) => {
     if (!f) return
-    if (f.type !== 'application/pdf') {
-      setErrorMsg('Please upload a valid PDF file.')
+
+    const ext = f.name.slice(f.name.lastIndexOf('.')).toLowerCase()
+    const mime = (f.type || '').toLowerCase()
+    const isAllowed = SUPPORTED_EXTS.includes(ext) ||
+      mime.includes('pdf') ||
+      mime.includes('word') ||
+      mime.startsWith('image/') ||
+      mime.startsWith('text/')
+
+    if (!isAllowed) {
+      setErrorMsg('Unsupported format. Please upload a Word document (.docx, .doc), PDF (.pdf), Text file (.txt, .md), or Image (.png, .jpg, .webp).')
       setStatus('error')
       return
     }
-    if (f.size > 10 * 1024 * 1024) {
-      setErrorMsg('File size exceeds the 10 MB limit.')
+
+    if (f.size > 25 * 1024 * 1024) {
+      setErrorMsg('File size exceeds the 25 MB limit.')
       setStatus('error')
       return
     }
+
     setFile(f)
     setStatus('idle')
     setErrorMsg('')
@@ -48,7 +70,7 @@ export default function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!file) { setErrorMsg('Please upload a PDF file.'); setStatus('error'); return }
+    if (!file) { setErrorMsg('Please upload a document or PDF file.'); setStatus('error'); return }
     if (!name.trim()) { setErrorMsg('Please enter your name.'); setStatus('error'); return }
     if (!enrollment.trim()) { setErrorMsg('Please enter your enrollment number.'); setStatus('error'); return }
     if (!semester.trim()) { setErrorMsg('Please select or enter your semester.'); setStatus('error'); return }
@@ -56,6 +78,8 @@ export default function App() {
     setStatus('loading'); setErrorMsg('')
 
     const formData = new FormData()
+    // Append as both 'file' and 'pdf' for 100% backend compatibility
+    formData.append('file', file)
     formData.append('pdf', file)
     formData.append('name', name.trim())
     formData.append('enrollmentNumber', enrollment.trim())
@@ -69,7 +93,7 @@ export default function App() {
       }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
-      const dName = res.headers.get('content-disposition')?.match(/filename="(.+)"/)?.[1] || 'modified.pdf'
+      const dName = res.headers.get('content-disposition')?.match(/filename="(.+)"/)?.[1] || `${file.name.replace(/\.[^/.]+$/, '')}_modified.pdf`
       setDownloadUrl(url); setDownloadName(dName); setStatus('success')
     } catch (err) {
       setErrorMsg(err.message); setStatus('error')
@@ -83,6 +107,7 @@ export default function App() {
   }
 
   const isLoading = status === 'loading'
+  const fileInfo = file ? getFileTypeInfo(file.name) : null
 
   return (
     <div className="app">
@@ -92,21 +117,22 @@ export default function App() {
             <span className="logo-icon">⬚</span>
             <span className="logo-text">Footer Changer</span>
           </div>
-          <p className="header-tagline">Stamp your PDFs with precision</p>
+          <p className="header-tagline">Universal Document to PDF Footer Stamper</p>
         </div>
       </header>
 
       <main className="main">
         <section className="hero">
-          <h1 className="hero-title">Replace PDF Footers<br /><em>in seconds.</em></h1>
-          <p className="hero-sub">Upload any PDF, enter your details, and receive a beautifully stamped document with Name (Left), Enrollment No. (Middle), and Semester (Right).</p>
+          <h1 className="hero-title">Replace Document Footers<br /><em>in seconds.</em></h1>
+          <p className="hero-sub">Upload any Word (DOCX/DOC), PDF, Text, or Image. We'll automatically convert it to PDF and stamp your custom footer: Name (Left), Enrollment No. (Middle), and Semester (Right).</p>
         </section>
 
         <div className="card">
           {status === 'success' ? (
             <SuccessPanel
               downloadUrl={downloadUrl} downloadName={downloadName}
-              onReset={reset} name={name} enrollment={enrollment} semester={semester} fileName={file?.name}
+              onReset={reset} name={name} enrollment={enrollment} semester={semester}
+              fileName={file?.name} fileInfo={fileInfo}
             />
           ) : (
             <form className="form" onSubmit={handleSubmit} noValidate>
@@ -116,14 +142,27 @@ export default function App() {
                 onDrop={onDrop} onDragOver={onDragOver} onDragLeave={onDragLeave}
                 onClick={() => !file && fileInputRef.current?.click()}
               >
-                <input ref={fileInputRef} type="file" accept="application/pdf"
-                  onChange={onFileChange} className="hidden-input" />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.docx,.doc,.txt,.md,.rtf,.png,.jpg,.jpeg,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*,text/*"
+                  onChange={onFileChange}
+                  className="hidden-input"
+                />
                 {file ? (
                   <div className="file-info">
-                    <span className="file-icon">📄</span>
+                    <span className="file-icon">{fileInfo.icon}</span>
                     <div className="file-details">
-                      <span className="file-name">{file.name}</span>
-                      <span className="file-size">{(file.size / 1024).toFixed(1)} KB</span>
+                      <div className="file-name-row">
+                        <span className="file-name">{file.name}</span>
+                        <span className={`file-badge ${fileInfo.badgeClass}`}>{fileInfo.label}</span>
+                      </div>
+                      <div className="file-meta">
+                        <span className="file-size">{(file.size / 1024).toFixed(1)} KB</span>
+                        {!fileInfo.isPdf && (
+                          <span className="convert-badge">⚡ Auto-converts to PDF</span>
+                        )}
+                      </div>
                     </div>
                     <button type="button" className="remove-btn"
                       onClick={(e) => { e.stopPropagation(); removeFile() }}>✕</button>
@@ -131,8 +170,14 @@ export default function App() {
                 ) : (
                   <div className="drop-prompt">
                     <span className="drop-icon">⬆</span>
-                    <p className="drop-text"><strong>Drop your PDF here</strong><br />or click to browse</p>
-                    <span className="drop-limit">PDF only · Max 10 MB</span>
+                    <p className="drop-text"><strong>Drop your Word DOCX, PDF, or Image here</strong><br />or click to browse</p>
+                    <div className="format-chips">
+                      <span className="format-chip">Word .docx</span>
+                      <span className="format-chip">PDF</span>
+                      <span className="format-chip">Images</span>
+                      <span className="format-chip">Text .txt</span>
+                    </div>
+                    <span className="drop-limit">Word · PDF · PNG/JPG · Text · Max 25 MB</span>
                   </div>
                 )}
               </div>
@@ -263,7 +308,21 @@ export default function App() {
 
               {/* Submit */}
               <button type="submit" className={`btn-primary${isLoading ? ' loading' : ''}`} disabled={isLoading}>
-                {isLoading ? (<><span className="spinner" />Processing PDF…</>) : (<><span>⬦</span> Stamp Footer</>)}
+                {isLoading ? (
+                  <>
+                    <span className="spinner" />
+                    {fileInfo && !fileInfo.isPdf
+                      ? 'Converting to PDF & Stamping Footer…'
+                      : 'Stamping PDF Footer…'}
+                  </>
+                ) : (
+                  <>
+                    <span>⬦</span>
+                    {fileInfo && !fileInfo.isPdf
+                      ? 'Convert to PDF & Stamp Footer'
+                      : 'Stamp Footer'}
+                  </>
+                )}
               </button>
             </form>
           )}
@@ -272,9 +331,9 @@ export default function App() {
         {/* Steps */}
         <section className="steps">
           {[
-            { num: '01', title: 'Upload', desc: 'Drop in any PDF up to 10 MB' },
-            { num: '02', title: 'Fill details', desc: 'Enter name, enrollment number & semester' },
-            { num: '03', title: 'Download', desc: 'Get your stamped PDF instantly' },
+            { num: '01', title: 'Upload Any Document', desc: 'Drop Word (.docx), PDF, Text, or Images up to 25 MB' },
+            { num: '02', title: 'Fill Details', desc: 'Enter name, enrollment number & semester' },
+            { num: '03', title: 'Convert & Stamp', desc: 'Auto-converts to PDF & applies your stamped footer instantly' },
           ].map((s) => (
             <div className="step" key={s.num}>
               <span className="step-num">{s.num}</span>
@@ -286,19 +345,27 @@ export default function App() {
       </main>
 
       <footer className="site-footer">
-        <p>Footer Changer · Built with pdf-lib · Express · React · Vite</p>
+        <p>Footer Changer · Universal Document Engine · pdf-lib · Express · React · Vite</p>
       </footer>
     </div>
   )
 }
 
-function SuccessPanel({ downloadUrl, downloadName, onReset, name, enrollment, semester, fileName }) {
+function SuccessPanel({ downloadUrl, downloadName, onReset, name, enrollment, semester, fileName, fileInfo }) {
   const semDisplay = semester ? semester.replace(/^(?:semester|sem)[\s:-]*/i, '') : ''
+  const wasConverted = fileInfo && !fileInfo.isPdf
+
   return (
     <div className="success-panel">
       <div className="success-icon">✓</div>
-      <h2 className="success-title">PDF Ready!</h2>
-      <p className="success-sub">Footer stamped on <strong>{fileName}</strong></p>
+      <h2 className="success-title">{wasConverted ? 'Document Converted & Stamped!' : 'PDF Ready!'}</h2>
+      <p className="success-sub">
+        {wasConverted ? (
+          <>Converted <strong>{fileName}</strong> to PDF with custom footer applied</>
+        ) : (
+          <>Footer stamped on <strong>{fileName}</strong></>
+        )}
+      </p>
       <div className="success-footer-preview mono">
         <div className="success-preview-item">
           <span className="preview-tag">Left</span>
@@ -314,9 +381,9 @@ function SuccessPanel({ downloadUrl, downloadName, onReset, name, enrollment, se
         </div>
       </div>
       <a href={downloadUrl} download={downloadName} className="btn-primary download-btn">
-        ⬇ Download Modified PDF
+        ⬇ Download Stamped PDF
       </a>
-      <button className="btn-ghost" onClick={onReset}>Process another PDF</button>
+      <button className="btn-ghost" onClick={onReset}>Process another document</button>
     </div>
   )
 }

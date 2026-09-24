@@ -1,15 +1,16 @@
-# Footer Changer — PDF Footer Replacer
+# Footer Changer — Universal Document to PDF Footer Replacer
 
-A full-stack MERN-style web application that replaces the footer of every page in a PDF with custom name and enrollment number text.
+A full-stack web application that converts documents in various formats (Word `.docx`/`.doc`, plain text `.txt`/`.md`, images `.png`/`.jpg`/`.webp`, or native `.pdf`) into PDF and stamps custom name, enrollment number, and semester across the bottom of every page.
 
 ## Tech Stack
 
-| Layer     | Technology                        |
-|-----------|-----------------------------------|
-| Frontend  | React 18 + Vite                   |
-| Backend   | Node.js + Express                 |
-| PDF       | pdf-lib                           |
-| Uploads   | Multer (multipart/form-data)      |
+| Layer     | Technology                                   |
+|-----------|----------------------------------------------|
+| Frontend  | React 19 + Vite                              |
+| Backend   | Node.js + Express                            |
+| Converter | Mammoth, Headless Edge / Chrome, LibreOffice |
+| PDF       | pdf-lib                                      |
+| Uploads   | Multer (multipart/form-data)                 |
 
 ---
 
@@ -18,16 +19,17 @@ A full-stack MERN-style web application that replaces the footer of every page i
 ```
 pdf-footer-app/
 ├── backend/
-│   ├── server.js          # Express API
-│   ├── uploads/           # Temp storage (auto-created, auto-cleaned)
+│   ├── server.js          # Express API & stamping engine
+│   ├── converter.js       # Universal document converter
+│   ├── uploads/           # Temp storage (auto-cleaned)
 │   └── package.json
 └── frontend/
     ├── src/
-    │   ├── App.jsx         # Main React component
-    │   ├── App.css         # Styles
-    │   ├── main.jsx        # Entry point
-    │   └── index.css       # Global styles + CSS variables
-    ├── vite.config.js      # Vite config + dev proxy
+    │   ├── App.jsx        # Main React component
+    │   ├── App.css        # Styles & format badges
+    │   ├── main.jsx       # Entry point
+    │   └── index.css      # Design system
+    ├── vite.config.js     # Vite config + dev proxy
     └── package.json
 ```
 
@@ -36,7 +38,7 @@ pdf-footer-app/
 ## Running Locally
 
 ### Prerequisites
-- Node.js v18+ (tested on v22)
+- Node.js v18+ (tested on v22+)
 - npm
 
 ### 1. Install & start the backend
@@ -59,7 +61,7 @@ npm run dev
 
 > The Vite dev server proxies `/upload` and `/health` to `localhost:5000` automatically.
 
-### 3. (Optional) Production build — single server
+### 3. Production build — single server
 
 ```bash
 # Build the frontend
@@ -78,22 +80,22 @@ cd ../backend && node server.js
 
 Accepts a multipart/form-data request.
 
-| Field             | Type   | Required | Description                     |
-|-------------------|--------|----------|---------------------------------|
-| `pdf`             | File   | ✅       | PDF file (max 10 MB)            |
-| `name`            | String | ✅       | Name for left of footer         |
-| `enrollmentNumber`| String | ✅       | Enrollment number for center    |
-| `semester`        | String | ✅       | Semester for right of footer    |
+| Field             | Type   | Required | Description                                                    |
+|-------------------|--------|----------|----------------------------------------------------------------|
+| `file` or `pdf`   | File   | ✅       | Document file (`.docx`, `.doc`, `.pdf`, `.png`, `.jpg`, `.txt`) (max 25 MB) |
+| `name`            | String | ✅       | Name for left of footer                                        |
+| `enrollmentNumber`| String | ✅       | Enrollment number for center                                   |
+| `semester`        | String | ✅       | Semester for right of footer                                   |
 
 **Success response:** Binary PDF file download (`Content-Type: application/pdf`)
 
 **Error responses:**
 
-| Status | Reason                          |
-|--------|---------------------------------|
-| 400    | Missing file, name, enrollment number, or semester; invalid file type |
-| 413    | File exceeds 10 MB              |
-| 500    | PDF processing failure          |
+| Status | Reason                                                        |
+|--------|---------------------------------------------------------------|
+| 400    | Missing file, name, enrollment number, or semester; invalid format |
+| 413    | File exceeds 25 MB                                            |
+| 500    | Processing failure                                            |
 
 ### `GET /health`
 
@@ -103,29 +105,24 @@ Returns `{ "status": "ok" }`.
 
 ## How It Works
 
-For each page of the uploaded PDF, the backend:
-1. Draws a **white rectangle** over the bottom 54pt to cover any existing footer
-2. Draws a thin **separator line** at the top of the footer zone
-3. Renders the 3-section footer layout:
-   - **Left**: `Name: <name>`
-   - **Middle**: `Enrollment No: <enrollmentNumber>`
-   - **Right**: `Semester: <semester>`
-4. Includes automatic font scaling so that long inputs never overlap.
-
-The rest of the page content is untouched.
+1. **Auto-Conversion**:
+   - If a Word `.docx` is uploaded, it is converted via Mammoth to structured semantic HTML, then printed to PDF via headless browser (or LibreOffice).
+   - If an image (`.png`, `.jpg`) is uploaded, it is embedded onto an A4 page with clearance for the footer.
+   - If a text file (`.txt`, `.md`) is uploaded, it is converted to clean paginated text.
+   - If already a PDF, it is processed directly.
+2. **Footer Stamping**:
+   - Covers the bottom 70pt with a clean white zone.
+   - Adds a clean separator line.
+   - Renders the 3-section footer layout:
+     - **Left**: `Name: <name>`
+     - **Middle**: `Enrollment No: <enrollmentNumber>`
+     - **Right**: `Semester: <semester>`
+   - Automatically calculates gap spacing and dynamically scales font size to fit.
 
 ---
 
 ## Environment Variables
 
-| Variable | Default              | Description         |
-|----------|----------------------|---------------------|
-| `PORT`   | `5000`               | Backend server port |
-
----
-
-## Limitations / Notes
-
-- Encrypted / password-protected PDFs will fail with a 500 error
-- Uploaded files are deleted immediately after processing (no storage)
-- File size limit: 10 MB
+| Variable | Default | Description         |
+|----------|---------|---------------------|
+| `PORT`   | `5000`  | Backend server port |
